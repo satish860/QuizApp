@@ -5,20 +5,37 @@ import {
   Text,
   View,
   ActivityIndicator,
+  TouchableOpacity
 } from "react-native";
 
-function Quiz() {
+function Quiz({ navigation }) {
   const [data, setData] = useState([]);
   const [isLoading, setLoading] = useState(true);
   const [questionId, setQuestionId] = useState(0);
   const [totalScore, settotalScore] = useState(0);
+
+
+  function getRandom(arr, n) {
+    var result = new Array(n),
+        len = arr.length,
+        taken = new Array(len);
+    if (n > len)
+        throw new RangeError("getRandom: more elements taken than available");
+    while (n--) {
+        var x = Math.floor(Math.random() * len);
+        result[n] = arr[x in taken ? taken[x] : x];
+        taken[x] = --len in taken ? taken[len] : len;
+    }
+    return result;
+}
+
   const getQuestions = async () => {
     try {
       const response = await fetch(
         "https://sheet2api.com/v1/5fIIA2nxT1OU/hquestions"
       );
       const json = await response.json();
-      setData(json);
+      setData(getRandom(json,10));
     } catch (error) {
       console.error(error);
     } finally {
@@ -35,6 +52,11 @@ function Quiz() {
 
   const OnNextEvent = () => {
     var nextQuestionId = questionId + 1;
+    if (nextQuestionId == 9) {
+      navigation.navigate("Result", {
+        score: totalScore,
+      });
+    }
     setQuestionId(nextQuestionId);
   };
 
@@ -45,55 +67,83 @@ function Quiz() {
   return (
     <View style={styles.container}>
       {isLoading ? (
-        <ActivityIndicator />
+        <View
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            height: "100%",
+          }}
+        >
+          <Text style={{ fontSize: 32, fontWeight: "700" }}>LOADING...</Text>
+        </View>
       ) : (
-        <>
-          <View style={styles.questionContainer}>
-            <Text style={styles.question}>{data[questionId].Questions}</Text>
+        data && (
+          <View style={styles.parent}>
+            <View style={styles.top}>
+              <Text style={styles.question}>
+                Q. {decodeURIComponent(data[questionId].Questions)}
+              </Text>
+            </View>
+            <View style={styles.options}>
+              <TouchableOpacity
+                style={styles.optionButtom}
+                onPress={() => onOptionPress(1, data[questionId].Answer)}
+              >
+                <Text style={styles.option}>
+                  {decodeURIComponent(data[questionId]["Option-1"])}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.optionButtom}
+                onPress={() => onOptionPress(2, data[questionId].Answer)}
+              >
+                <Text style={styles.option}>
+                  {decodeURIComponent(data[questionId]["Option-2"])}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.optionButtom}
+                onPress={() =>  onOptionPress(3, data[questionId].Answer)}
+              >
+                <Text style={styles.option}>
+                  {decodeURIComponent(data[questionId]["Option-3"])}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.optionButtom}
+                onPress={() =>  onOptionPress(4, data[questionId].Answer)}
+              >
+                <Text style={styles.option}>
+                  {decodeURIComponent(data[questionId]["Option-4"])}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.bottom}>
+              {/* <TouchableOpacity style={styles.button}>
+              <Text style={styles.buttonText}>PREV</Text>
+            </TouchableOpacity> */}
+
+              {questionId !== 9 && (
+                <TouchableOpacity
+                  style={styles.button}
+                  onPress={OnNextEvent}
+                >
+                  <Text style={styles.buttonText}>SKIP</Text>
+                </TouchableOpacity>
+              )}
+
+              {questionId === 9 && (
+                <TouchableOpacity
+                  style={styles.button}
+                  onPress={OnNextEvent}
+                >
+                  <Text style={styles.buttonText}>SHOW RESULTS</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
-          <View style={styles.answerContainer}>
-            <Pressable
-              style={styles.buttonStyle}
-              onPress={() => {
-                onOptionPress(data[questionId]["Answer"], 1);
-              }}
-            >
-              <Text>{data[questionId]["Option-1"]}</Text>
-            </Pressable>
-            <Pressable
-              style={styles.buttonStyle}
-              onPress={() => {
-                onOptionPress(data[questionId]["Answer"], 2);
-              }}
-            >
-              <Text>{data[questionId]["Option-2"]}</Text>
-            </Pressable>
-            <Pressable
-              style={styles.buttonStyle}
-              onPress={() => {
-                onOptionPress(data[questionId]["Answer"], 3);
-              }}
-            >
-              <Text>{data[questionId]["Option-3"]}</Text>
-            </Pressable>
-            <Pressable
-              style={styles.buttonStyle}
-              onPress={() => {
-                onOptionPress(data[questionId]["Answer"], 4);
-              }}
-            >
-              <Text>{data[questionId]["Option-4"]}</Text>
-            </Pressable>
-          </View>
-          <View style={styles.buttonContainer}>
-            <Pressable style={styles.buttonStyle}>
-              <Text>Back</Text>
-            </Pressable>
-            <Pressable style={styles.buttonStyle} onPress={() => OnNextEvent()}>
-              <Text>Next</Text>
-            </Pressable>
-          </View>
-        </>
+        )
       )}
     </View>
   );
@@ -103,27 +153,52 @@ export default Quiz;
 
 const styles = StyleSheet.create({
   container: {
+    paddingTop: 40,
+    paddingHorizontal: 20,
     height: "100%",
-    backgroundColor: "#fff",
   },
-  questionContainer: {
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: "5%",
+  top: {
+    marginVertical: 16,
   },
-  question: {
-    lineHeight: 25,
-  },
-
-  answerContainer: {
+  options: {
+    marginVertical: 16,
     flex: 1,
   },
-  buttonStyle: {
-    padding: 20,
-  },
-  buttonContainer: {
-    flexDirection: "row",
+  bottom: {
+    marginBottom: 12,
+    paddingVertical: 16,
     justifyContent: "space-between",
-    marginBottom: "10%",
+    flexDirection: "row",
+  },
+  button: {
+    backgroundColor: "#1A759F",
+    padding: 12,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    alignItems: "center",
+    marginBottom: 30,
+  },
+  buttonText: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "white",
+  },
+  question: {
+    fontSize: 28,
+  },
+  option: {
+    fontSize: 18,
+    fontWeight: "500",
+    color: "white",
+  },
+  optionButtom: {
+    paddingVertical: 12,
+    marginVertical: 6,
+    backgroundColor: "#34A0A4",
+    paddingHorizontal: 12,
+    borderRadius: 12,
+  },
+  parent: {
+    height: "100%",
   },
 });
